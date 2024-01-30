@@ -90,8 +90,6 @@ const (
 	FAILED   CollectStatus = "failed"
 )
 
-type HintCode string
-
 type CollectResponse struct {
 	BankIDResponse
 	CollectRequest

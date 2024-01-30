@@ -5,6 +5,7 @@ import (
 
 	"github.com/Splinter0/identity/bankid"
 	"github.com/Splinter0/identity/provider"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -17,7 +18,6 @@ func main() {
 		c.HTML(200, "phish.html", gin.H{})
 	})
 	r.Run()*/
-
 	rp, err := bankid.NewBankIDRP(bankid.TEST)
 	if err != nil {
 		log.Fatal(err)
@@ -28,12 +28,32 @@ func main() {
 		DefaultUserDetails: []provider.UserDetailType{
 			provider.FIRST_NAME,
 			provider.LAST_NAME,
-			provider.AGE,
+		},
+		LaunchURLChannel: make(chan string, 1),
+		QRCodeChannel:    make(chan []byte, 30),
+		MessageChannel:   make(chan string),
+		ResponseChannel:  make(chan provider.BankIDAuthenticationResponse, 1),
+		Config: provider.BankIDConfig{
+			CompanyName:     "Jesus AB",
+			RedirectBaseUrl: "http://localhost",
 		},
 	}
-	p.Authenticate(provider.BankIDAuthenticationRequest{
-		UserIp:         "213.102.85.9",
-		MessageForUser: "Welcome to our service!",
-		SameDevice:     true,
+
+	r := gin.Default()
+	r.POST("/same", func(c *gin.Context) {
+		go p.Authenticate(provider.BankIDAuthenticationRequest{
+			RequestedDetails: []provider.UserDetailType{},
+			SameDevice:       true,
+			UserIp:           c.ClientIP(),
+			MessageForUser:   "Log into blah",
+		})
+
+		c.Redirect(302, <-p.LaunchURLChannel)
 	})
+	r.GET("/status", func(c *gin.Context) {
+		c.JSON(200, struct {
+			Message string `json:"message"`
+		}{Message: <-p.MessageChannel})
+	})
+	r.Run("0.0.0.0:8080")
 }

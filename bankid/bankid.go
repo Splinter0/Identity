@@ -100,32 +100,27 @@ func (b *BankIDRP) GenerateLaunchURL(resp *AuthResponse, returnURL string, appLi
 	return fmt.Sprintf("https://app.bankid.com/?autostarttoken=%s&redirect=%s", resp.AutoStartToken, returnURL)
 }
 
-func (b *BankIDRP) GenerateQR(resp *AuthResponse) {
-	count := 0
-	for {
+func (b *BankIDRP) GenerateQR(resp *AuthResponse, comms chan []byte) {
+	for count := 0; count < 30; count++ {
 		hmac := hmac.New(sha256.New, []byte(resp.QrStartSecret))
 		hmac.Write([]byte(strconv.Itoa(count)))
 		qrAuthCode := hex.EncodeToString(hmac.Sum(nil))
 		content := fmt.Sprintf("bankid.%s.%d.%s", resp.QrStartToken, count, qrAuthCode)
 		log.Println(content)
-		_, err := qrcode.Encode(content, qrcode.Medium, 256)
+		code, err := qrcode.Encode(content, qrcode.Medium, 256)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Write the QR code to a file
-		err = qrcode.WriteFile(content, qrcode.Medium, 256, "qr.png")
-		if err != nil {
-			log.Fatal(err)
-		}
+		comms <- code
+
 		time.Sleep(1 * time.Second)
-		count += 1
 	}
 }
 
 // Collecting order
 
-func (b *BankIDRP) StartCollection(resp *AuthResponse) *CollectResponse {
+func (b *BankIDRP) StartCollection(resp *AuthResponse, messagesChannel chan string) *CollectResponse {
 	collectRequest := &CollectRequest{
 		OrderRef: resp.OrderRef,
 	}
@@ -144,6 +139,7 @@ func (b *BankIDRP) StartCollection(resp *AuthResponse) *CollectResponse {
 		if collectResponse.Status == FAILED || collectResponse.Status == COMPLETE {
 			return collectResponse
 		}
+		messagesChannel <- collectResponse.HintCode.GetMessage()
 		time.Sleep(2 * time.Second)
 	}
 }
