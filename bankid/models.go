@@ -40,11 +40,11 @@ func (c CertificatePolicy) getTest() string {
 }
 
 type AuthRequestRequirements struct {
-	PinCode             bool                `json:"pinCode,omitempty"`
-	Mrtd                bool                `json:"mrtd,omitempty"`
-	CardReader          CardReaderClass     `json:"cardReader,omitempty"`
-	PersonalNumber      string              `json:"personalNumber,omitempty"`
-	CertificatePolicies []CertificatePolicy `json:"certificatePolicies,omitempty"`
+	PinCode             bool            `json:"pinCode,omitempty"`
+	Mrtd                bool            `json:"mrtd,omitempty"`
+	CardReader          CardReaderClass `json:"cardReader,omitempty"`
+	PersonalNumber      string          `json:"personalNumber,omitempty"`
+	CertificatePolicies []string        `json:"certificatePolicies,omitempty"`
 }
 
 type CallInitiator string
@@ -63,9 +63,13 @@ type PhoneAuthRequest struct {
 	Requirements          *AuthRequestRequirements `json:"requirement,omitempty"`
 }
 
-type CollectRequest struct {
+type OrderRequest struct {
 	OrderRef string `json:"orderRef"`
 }
+
+type CollectRequest OrderRequest
+
+type CancelRequest OrderRequest
 
 // Responses
 

@@ -15,9 +15,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
-
-	"github.com/skip2/go-qrcode"
 )
 
 const LATEST_VERSION = "6.0"
@@ -76,6 +73,10 @@ func (b *BankIDRP) GetPhoneAuthUrl() string {
 	return b.buildUrl("/phone/auth")
 }
 
+func (b *BankIDRP) GetCancelUrl() string {
+	return b.buildUrl("/cancel")
+}
+
 // Authentication methods
 
 func (b *BankIDRP) DoAuth(ar AuthRequest) *AuthResponse {
@@ -100,69 +101,46 @@ func (b *BankIDRP) GenerateLaunchURL(resp *AuthResponse, returnURL string, appLi
 	return fmt.Sprintf("https://app.bankid.com/?autostarttoken=%s&redirect=%s", resp.AutoStartToken, returnURL)
 }
 
-func (b *BankIDRP) GenerateQR(resp *AuthResponse, comms chan []byte) {
+func (b *BankIDRP) GenerateQRData(resp *AuthResponse) (qrCodeData []string) {
 	for count := 0; count < 30; count++ {
 		hmac := hmac.New(sha256.New, []byte(resp.QrStartSecret))
 		hmac.Write([]byte(strconv.Itoa(count)))
 		qrAuthCode := hex.EncodeToString(hmac.Sum(nil))
-		content := fmt.Sprintf("bankid.%s.%d.%s", resp.QrStartToken, count, qrAuthCode)
-		log.Println(content)
-		code, err := qrcode.Encode(content, qrcode.Medium, 256)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		comms <- code
-
-		time.Sleep(1 * time.Second)
+		qrCodeData = append(qrCodeData, fmt.Sprintf("bankid.%s.%d.%s", resp.QrStartToken, count, qrAuthCode))
 	}
+
+	return qrCodeData
 }
 
 // Collecting order
 
-func (b *BankIDRP) StartCollection(resp *AuthResponse, messagesChannel chan string) *CollectResponse {
+func (b *BankIDRP) DoCollection(orderRef string) *CollectResponse {
 	collectRequest := &CollectRequest{
-		OrderRef: resp.OrderRef,
-	}
-	jsonData, err := json.Marshal(collectRequest)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(jsonData))
-	req, err := http.NewRequest("POST", b.GetCollectUrl(), bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	for {
-		collectResponse := b.collect(req)
-		if collectResponse.Status == FAILED || collectResponse.Status == COMPLETE {
-			return collectResponse
-		}
-		messagesChannel <- collectResponse.HintCode.GetMessage()
-		time.Sleep(2 * time.Second)
-	}
-}
-
-func (b *BankIDRP) collect(req *http.Request) *CollectResponse {
-	resp, err := b.Client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+		OrderRef: orderRef,
 	}
 	var response CollectResponse
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		log.Fatal(err)
-	}
+	b.post(b.GetCollectUrl(), collectRequest, &response)
 	return &response
 }
 
+// Cancelling
+
+func (b *BankIDRP) Cancel(orderRef string) {
+	cancelRequest := &CancelRequest{
+		OrderRef: orderRef,
+	}
+	b.post(b.GetCancelUrl(), cancelRequest, nil)
+}
+
 // Utils
+
+func (b *BankIDRP) GetCertPolicyString(policy CertificatePolicy) string {
+	if b.Environment == TEST {
+		return policy.getTest()
+	}
+
+	return string(policy)
+}
 
 func (b *BankIDRP) post(url string, request, response interface{}) {
 	jsonData, err := json.Marshal(request)
@@ -179,6 +157,9 @@ func (b *BankIDRP) post(url string, request, response interface{}) {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
+	if response == nil {
+		return
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
