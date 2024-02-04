@@ -7,6 +7,8 @@ require (
 	golang.org/x/crypto v0.18.0 // indirect
 )
 
+require gopkg.in/yaml.v2 v2.4.0
+
 require (
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/kr/pretty v0.1.0 // indirect

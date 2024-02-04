@@ -1,0 +1,10 @@
+<html>
+    <head>
+        <title>Identity</title>
+    </head>
+    <body>
+        {{ range .Providers}}
+            <a href="/{{ . }}">{{ . }}</a>
+        {{ end }}
+    </body>
+</html>

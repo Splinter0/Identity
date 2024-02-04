@@ -36,13 +36,20 @@ func (e BankIDEnvironment) getEndpoint() string {
 }
 
 type BankIDRP struct {
-	Client      *http.Client
-	Version     string
-	Environment BankIDEnvironment
+	Client *http.Client
+	Config *BankIDConfig
 }
 
-func NewBankIDRP(env BankIDEnvironment) (*BankIDRP, error) {
-	tlsConfig, err := buildTLSConfig(env)
+type BankIDConfig struct {
+	Env               BankIDEnvironment `yaml:"env"`
+	Version           string            `yaml:"version"`
+	CertificateFolder string            `yaml:"certificateFolder"`
+	Domain            *string           `yaml:"domain"`
+	VisibleMessage    string            `yaml:"visibleMessage"`
+}
+
+func NewBankIDRP(config *BankIDConfig) (*BankIDRP, error) {
+	tlsConfig, err := buildTLSConfig(config)
 	if err != nil {
 		return nil, errors.New("Could not load TLS configuration for BankID: " + err.Error())
 	}
@@ -50,15 +57,14 @@ func NewBankIDRP(env BankIDEnvironment) (*BankIDRP, error) {
 		Client: &http.Client{
 			Transport: &http.Transport{TLSClientConfig: tlsConfig},
 		},
-		Version:     LATEST_VERSION,
-		Environment: env,
+		Config: config,
 	}, nil
 }
 
 // URL Building
 
 func (b *BankIDRP) buildUrl(path string) string {
-	return b.Environment.getEndpoint() + "/rp/v" + b.Version + path
+	return b.Config.Env.getEndpoint() + "/rp/v" + b.Config.Version + path
 }
 
 func (b *BankIDRP) GetAuthUrl() string {
@@ -135,7 +141,7 @@ func (b *BankIDRP) Cancel(orderRef string) {
 // Utils
 
 func (b *BankIDRP) GetCertPolicyString(policy CertificatePolicy) string {
-	if b.Environment == TEST {
+	if b.Config.Env == TEST {
 		return policy.getTest()
 	}
 
@@ -170,8 +176,8 @@ func (b *BankIDRP) post(url string, request, response interface{}) {
 	}
 }
 
-func buildTLSConfig(env BankIDEnvironment) (*tls.Config, error) {
-	path := fmt.Sprintf("bankid/certificates/%s/", env)
+func buildTLSConfig(config *BankIDConfig) (*tls.Config, error) {
+	path := fmt.Sprintf("%s%s/", config.CertificateFolder, config.Env)
 	cert, err := tls.LoadX509KeyPair(
 		path+"cert.pem",
 		path+"key.pem",

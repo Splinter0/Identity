@@ -1,0 +1,8 @@
+service: "Company AB"
+providers: ["bankid"]
+bankid:
+  env: "test"
+  version: "6.0"
+  certificateFolder: "bankid/certificates/"
+  domain: "dev.mastersplinter.work"
+  visibleMessage: "Log into an amazing company"

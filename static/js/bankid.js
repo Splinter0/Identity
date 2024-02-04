@@ -22,7 +22,7 @@ function collect() {
     count = 0;
     var timer = setInterval(
         async () => {
-            await fetch("/status")
+            await fetch("/bankid/status")
                 .then((r) => r.json())
                 .then((json) => {
                     count++;
@@ -37,6 +37,9 @@ function collect() {
                     } else if (json.status === "complete")  {
                         setMessage("");
                         clearTimeout(timer);
+                        cancelButton.style.display = "none";
+                        extendButton.style.display = "none";
+                        qrCodeElement.style.display = "none";
                         document.getElementById("userData").textContent = json.data.user.name;
                     } else {
                         message = json.message;
@@ -65,7 +68,7 @@ function collect() {
 }
 function start(same) {
     fetch(
-        `/start?same=${same}`, 
+        `/bankid/start?same=${same}`, 
         {
             method: "POST",
             headers: {
@@ -89,7 +92,7 @@ function start(same) {
 }
 function cancel() {
     fetch(
-        `/cancel`, 
+        `/bankid/cancel`, 
         {
             method: "POST",
             headers: {

@@ -2,7 +2,6 @@ package bankid
 
 import (
 	"encoding/base64"
-	"fmt"
 	"log"
 	"time"
 
@@ -11,9 +10,14 @@ import (
 
 const SESSION_TIMEOUT = 30
 
+type BankIDProvider struct {
+	Client *BankIDRP
+	Cache  *cache.Cache
+}
+
 type BankIDAuthenticationRequest struct {
 	SameDevice     bool
-	Mobile         bool
+	UserAgent      string
 	UserIp         string
 	MessageForUser string
 	RedirectURL    string
@@ -33,11 +37,6 @@ type BankIDStatusResponse struct {
 	Data    interface{}   `json:"data,omitempty"`
 }
 
-type BankIDProvider struct {
-	Client *BankIDRP
-	Cache  *cache.Cache
-}
-
 type BankIDTransaction struct {
 	SameDevice bool
 	Mobile     bool
@@ -47,8 +46,8 @@ type BankIDTransaction struct {
 	StartedAt  time.Time
 }
 
-func NewBankIDProvider() *BankIDProvider {
-	rp, err := NewBankIDRP(TEST)
+func NewBankIDProvider(config *BankIDConfig) *BankIDProvider {
+	rp, err := NewBankIDRP(config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +61,8 @@ func NewBankIDProvider() *BankIDProvider {
 
 func (provider *BankIDProvider) Authenticate(request BankIDAuthenticationRequest) BankIDAuthenticationResponse {
 	var policy CertificatePolicy
-	if request.Mobile || !request.SameDevice {
+	isMobile := IsMobileUserAgent(request.UserAgent)
+	if isMobile || !request.SameDevice {
 		policy = Mobile
 	} else {
 		policy = OnFile
@@ -101,15 +101,13 @@ func (provider *BankIDProvider) Authenticate(request BankIDAuthenticationRequest
 		response.TransactionKey,
 		BankIDTransaction{
 			SameDevice: request.SameDevice,
-			Mobile:     request.Mobile,
+			Mobile:     isMobile,
 			UserIp:     request.UserIp,
 			QrCodeData: qrCodeData,
 			OrderRef:   resp.OrderRef,
 			StartedAt:  time.Now(),
 		},
 	)
-
-	fmt.Println(qrCodeData)
 
 	return response
 }
@@ -151,9 +149,6 @@ func (provider *BankIDProvider) Status(transactionKey string) BankIDStatusRespon
 			Status:  FAILED,
 		}
 	}
-
-	fmt.Println(collectedData)
-	// On same device maybe even wait for redirection?
 
 	if transaction.SameDevice && transaction.UserIp != collectedData.CompletionData.Device.IpAddress {
 		return BankIDStatusResponse{
