@@ -40,7 +40,7 @@ function collect() {
                         cancelButton.style.display = "none";
                         extendButton.style.display = "none";
                         qrCodeElement.style.display = "none";
-                        document.getElementById("userData").textContent = json.data.user.name;
+                        document.getElementById("userData").textContent = "Logged in as: " + json.data.user.name;
                     } else {
                         message = json.message;
                         if (json.data && json.data.qrData) {

@@ -31,7 +31,7 @@ func (e BankIDEnvironment) getEndpoint() string {
 	case PRODUCTION:
 		return "https://appapi2.bankid.com"
 	default:
-		return "https://appapi2.test.bankid.com/"
+		return "https://appapi2.test.bankid.com"
 	}
 }
 

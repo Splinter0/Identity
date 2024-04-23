@@ -4,5 +4,5 @@ bankid:
   env: "test"
   version: "6.0"
   certificateFolder: "bankid/certificates/"
-  domain: "dev.mastersplinter.work"
+  domain: "example.app"
   visibleMessage: "Log into an amazing company"
