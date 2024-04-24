@@ -39,6 +39,8 @@ The Swedish BankID RP API allows users to log in using the BankID app. By defaul
 
 The project ships with the test certificates needed to integrate with the test servers, in production you will have to request your own certificates from BankID. You can follow the guides [here](https://www.bankid.com/utvecklare/test) on how you can set up your BankID testing environment.
 
+You can find a deployment of this at [http://bankid.mastersplinter.work](http://bankid.mastersplinter.work) where you can test it out provided you have configured your BankID device in test mode, you can learn how to do that [here](https://www.bankid.com/en/utvecklare/test/skaffa-testbankid/testbankid-konfiguration)
+
 ### Configuration
 
 - `env` -> sets the current environment, can be set to `test` or `prod`
